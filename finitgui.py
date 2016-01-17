@@ -156,6 +156,7 @@ class FiniyPyMain(tk.Frame):
 			self.message_area.delete('1.0', tk.END)
 			self.message_area.config(state=tk.DISABLED)
 			self.user_list.delete(0, tk.END)
+			self.refresh_lists()
 		else:
 			sel = self.channel_list.get(tk.ACTIVE)
 			if sel != self.active_channel:
