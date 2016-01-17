@@ -275,7 +275,7 @@ class FiniyPyMain(tk.Frame):
 			not (True in [r.upper() == self.conn.get_channel_name(s).upper() for s in u["mod_powers"]]),
 			u["username"].upper()
 		))
-		prev_active_user = self.channel_list.get(tk.ACTIVE)
+		prev_active_user = self.user_list.get(tk.ACTIVE)
 		active_index = -1
 		self.user_list.delete(0, tk.END)
 		prev_name = ""
@@ -293,7 +293,7 @@ class FiniyPyMain(tk.Frame):
 				active_index = i
 			prev_name = username
 		if active_index >= 0:
-			self.user_list-activate(active_index)
+			self.user_list.activate(active_index)
 	def refresh_messages(self):
 		r = self.active_channel
 		if len(r) == 0: return
