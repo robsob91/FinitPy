@@ -88,6 +88,7 @@ class FiniyPyMain(tk.Frame):
 		self.conn.on_message = self.on_message
 		self.rooms = {}
 		self.active_channel = ""
+		self.new_msg_count = 0
 		self.grid(sticky=tk.N+tk.S+tk.E+tk.W)
 		self.create_widgets()
 	def create_widgets(self):
@@ -160,6 +161,9 @@ class FiniyPyMain(tk.Frame):
 			if sel != self.active_channel:
 				self.active_channel = sel
 				self.refresh_lists()
+		if self.focus_displayof() is not None and self.new_msg_count > 0:
+			self.new_msg_count = 0
+			self.master.title("FinitPy")
 		self.after(250, self.poll)
 	def mention_user(self):
 		if self.user_list.size() == 0: return
@@ -233,6 +237,9 @@ class FiniyPyMain(tk.Frame):
 						channel = c
 						break
 				if channel is None: return
+				self.new_msg_count += 1
+				if self.focus_displayof() is None:
+					self.master.title("FinitPy ({})".format(self.new_msg_count))
 				data = data["data"].copy()
 				time = datetime.now()
 				data["created_at"] = ("00"+str(time.hour))[-2:] + ":" + ("00"+str(time.minute))[-2:]
