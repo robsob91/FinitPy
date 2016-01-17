@@ -4,7 +4,7 @@ This is the repository for FinitPy, a Python 3 library for communicating with [f
 
 *finitclient.py* is the library
 
-*finitcli.py* is the CLI client (*Warning:* passwords are visible by default, this client is also abandoned in favor of the GUI version)
+*finitcli.py* is the CLI client (this client is abandoned in favor of the GUI version)
 
 *finitgui.py* is a GUI client written using tk
 

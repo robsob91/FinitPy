@@ -3,6 +3,7 @@
 import re
 from datetime import datetime
 from finitclient import FinitClient
+from getpass import getpass
 
 def on_login(conn, success):
 	if success:
@@ -90,7 +91,7 @@ if __name__ == "__main__":
 	c.on_message = on_message
 	c.on_logout = on_logout
 	c.on_error = on_error
-	c.login(input("Email> "), input("Password> "))
+	c.login(input("Email> "), getpass("Password> "))
 	try:
 		last_room = None
 		while True:
