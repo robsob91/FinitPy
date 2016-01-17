@@ -166,6 +166,7 @@ class FiniyPyMain(tk.Frame):
 		self.message.insert(tk.INSERT, "@{} ".format(
 			re.sub("^\\[\\w+\\]\\s+", "", self.user_list.get(tk.ACTIVE))
 		))
+		self.message.focus_set()
 	def join_room(self, event):
 		r = self.conn.get_normalized_channel_name(self.join_var.get())
 		if r is None or r in self.rooms: return
