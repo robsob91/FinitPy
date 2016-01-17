@@ -100,6 +100,15 @@ if __name__ == "__main__":
 			cmd = cmd.strip().split(maxsplit=1)
 			if len(cmd) > 0:
 				cmd[0] = cmd[0].upper()
+			if len(cmd) > 0 and cmd[0] == "/HELP":
+				print("Available commands:")
+				print(" /join #channel")
+				print(" /join @user")
+				print(" /leave")
+				print(" /list")
+				print(" /whois @user")
+				print(" /exit")
+				print("Anything else you type will be sent as a message")
 			if len(cmd) == 1 and cmd[0] == "/LEAVE" and last_room is not None:
 				c.leave(last_room)
 				last_room = None

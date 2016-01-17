@@ -164,6 +164,11 @@ class FinitClient:
 		channel = "prv_{}_{}".format(id1, id2)
 		return self._internal_get_messages(channel)
 	def get_user_info(self, username):
+		username = username.strip()
+		if len(username) > 1 and username[0] == "@":
+			username = username[1:]
+		if len(username) == 0:
+			return None
 		try:
 			conn = http.client.HTTPSConnection("finit.co", timeout=30)
 			conn.request("GET", "/api/users/"+username,
