@@ -89,6 +89,7 @@ class FiniyPyMain(tk.Frame):
 		self.rooms = {}
 		self.active_channel = ""
 		self.new_msg_count = 0
+		self.new_pm = False
 		self.grid(sticky=tk.N+tk.S+tk.E+tk.W)
 		self.create_widgets()
 	def create_widgets(self):
@@ -158,13 +159,17 @@ class FiniyPyMain(tk.Frame):
 			self.user_list.delete(0, tk.END)
 			self.refresh_lists()
 		else:
-			sel = self.channel_list.get(tk.ACTIVE)
+			sel = self.get_channel_from_list_name(self.channel_list.get(tk.ACTIVE))
 			if sel != self.active_channel:
 				self.active_channel = sel
-				self.refresh_lists()
-		if self.focus_displayof() is not None and self.new_msg_count > 0:
+				if len(sel) and not self.rooms[sel]["loaded"]:
+					self.conn.join(sel)
+				else:
+					self.refresh_lists()
+		if self.focus_displayof() is not None and (self.new_msg_count > 0 or self.new_pm):
 			self.new_msg_count = 0
-			self.master.title("FinitPy")
+			self.new_pm = False
+			self.update_title()
 		self.after(250, self.poll)
 	def mention_user(self):
 		if self.user_list.size() == 0: return
@@ -177,10 +182,8 @@ class FiniyPyMain(tk.Frame):
 		if r is None or r in self.rooms: return
 		self.conn.join(r)
 	def leave_room(self):
-		sel = self.channel_list.curselection()
-		if len(sel):
-			r = self.channel_list.get(tk.ACTIVE)
-			self.conn.leave(r)
+		if len(self.active_channel):
+			self.conn.leave(self.active_channel)
 	def send_message(self, event=None):
 		sel = self.active_channel
 		msg = self.message_var.get().strip()[:255]
@@ -209,13 +212,31 @@ class FiniyPyMain(tk.Frame):
 				else:
 					messages = []
 				messages.reverse()
-				self.join_var.set("")
-				self.channel_list.insert(tk.END, name)
-				self.channel_list.selection_clear(0, tk.END)
-				self.channel_list.selection_set(tk.END)
-				self.channel_list.activate(self.channel_list.size()-1)
-				self.rooms[name] = {"channel_name":data["channel"], "id":uid,
-					"messages":messages, "members":data["members"]}
+				if name in self.rooms:
+					self.rooms[name]["messages"] = messages
+					self.rooms[name]["loaded"] = True
+					idx = -1
+					for i in range(self.channel_list.size()):
+						if self.channel_list.get(i) == self.rooms[name]["list_name"]:
+							idx = i
+							break
+					if idx < 0: return
+					self.rooms[name]["list_name"] = name
+					self.channel_list.delete(idx)
+					self.channel_list.insert(idx, name)
+					self.channel_list.selection_clear(0, tk.END)
+					self.channel_list.selection_set(idx)
+					self.channel_list.activate(idx)
+					self.refresh_lists()
+				else:
+					self.join_var.set("")
+					self.channel_list.insert(tk.END, name)
+					self.channel_list.selection_clear(0, tk.END)
+					self.channel_list.selection_set(tk.END)
+					self.channel_list.activate(self.channel_list.size()-1)
+					self.rooms[name] = {"channel_name":data["channel"], "id":uid,
+						"messages":messages, "members":data["members"],
+						"list_name":name, "loaded":True}
 			elif data["event"] == "unsubscribed":
 				f = None
 				for k in self.rooms:
@@ -224,7 +245,7 @@ class FiniyPyMain(tk.Frame):
 						break
 				if f is None: return
 				for i in range(self.channel_list.size()):
-					if self.channel_list.get(i) == k:
+					if self.get_channel_from_list_name(self.channel_list.get(i)) == k:
 						self.channel_list.delete(i)
 						break
 				del self.rooms[k]
@@ -239,8 +260,7 @@ class FiniyPyMain(tk.Frame):
 						break
 				if channel is None: return
 				self.new_msg_count += 1
-				if self.focus_displayof() is None:
-					self.master.title("FinitPy ({})".format(self.new_msg_count))
+				self.update_title()
 				data = data["data"].copy()
 				time = datetime.now()
 				data["created_at"] = ("00"+str(time.hour))[-2:] + ":" + ("00"+str(time.minute))[-2:]
@@ -249,6 +269,17 @@ class FiniyPyMain(tk.Frame):
 					self.rooms[channel]["messages"] = self.rooms[channel]["messages"][-100:]
 				if channel == self.active_channel:
 					self.refresh_messages()
+			elif data["event"] == 10: # This is a PM
+				id1, id2 = int(data["source_id"]), int(data["user_id"])
+				if id2 < id1:
+					id1, id2 = id2, id1
+				name = "@" + data["source"]["username"]
+				uid = self.conn.get_user_id(data["source"]["username"])
+				self.channel_list.insert(tk.END, name + " *")
+				self.rooms[name] = {"channel_name":"prv_{}_{}".format(id1,id2), "id":uid,
+					"messages":[], "members":[], "list_name":name+" *", "loaded":False}
+				self.new_pm = True
+				self.update_title()
 			elif data["event"] == "member-added":
 				channel = self.conn.get_channel_name(data["channel"])
 				self.rooms[channel]["members"].append(data["data"])
@@ -269,6 +300,15 @@ class FiniyPyMain(tk.Frame):
 				print(data)
 		except Exception:
 			traceback.print_exc()
+	def update_title(self):
+		if self.focus_displayof() is None:
+			pm = "* " if self.new_pm else ""
+			if self.new_msg_count > 0:
+				self.master.title("{}FinitPy ({})".format(pm, self.new_msg_count))
+			else:
+				self.master.title("{}FinitPy".format(pm))
+		else:
+			self.master.title("FinitPy")
 	def refresh_lists(self):
 		if len(self.active_channel) > 0:
 			self.user_info_var.set("@"+self.conn.user_data["user"]["username"]+" - "+self.active_channel)
@@ -276,6 +316,12 @@ class FiniyPyMain(tk.Frame):
 			self.user_info_var.set("@"+self.conn.user_data["user"]["username"])
 		self.refresh_members()
 		self.refresh_messages()
+	def get_channel_from_list_name(self, lname):
+		if len(lname) == 0: return ""
+		for c in self.rooms:
+			if self.rooms[c]["list_name"] == lname:
+				return c
+		return ""
 	def refresh_members(self):
 		r = self.active_channel
 		if len(r) == 0: return
