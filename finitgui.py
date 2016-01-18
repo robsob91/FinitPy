@@ -130,6 +130,14 @@ class FiniyPyMain(tk.Frame):
 		self.message_area.grid(column=1, row=3, columnspan=2, sticky=tk.N+tk.S+tk.E+tk.W)
 		self.message_area.tag_configure('normal', font=('Courier', 10,))
 		self.message_area.tag_configure('italics', font=('Courier', 10, 'italic',))
+		self.message_area.tag_configure('bold', font=('Courier', 10, 'bold',))
+		self.message_area.tag_configure('bold-italics', font=('Courier', 10, 'bold italic',))
+		self.message_area.tag_configure('admin-bold', font=('Courier', 10, 'bold',), foreground='red')
+		self.message_area.tag_configure('admin-bold-italics', font=('Courier', 10, 'bold italic',), foreground='red')
+		self.message_area.tag_configure('mod-bold', font=('Courier', 10, 'bold',), foreground='blue')
+		self.message_area.tag_configure('mod-bold-italics', font=('Courier', 10, 'bold italic',), foreground='blue')
+		self.message_area.tag_configure('op-bold', font=('Courier', 10, 'bold',), foreground='lime green')
+		self.message_area.tag_configure('op-bold-italics', font=('Courier', 10, 'bold italic',), foreground='lime green')
 		self.message_area.config(state=tk.DISABLED)
 		
 		self.join_lbl = tk.Label(self, text="Users")
@@ -197,7 +205,8 @@ class FiniyPyMain(tk.Frame):
 			time = ("00"+str(time.hour))[-2:] + ":" + ("00"+str(time.minute))[-2:]
 			self.rooms[r]["messages"].append({
 				"created_at": time,
-				"sender": {"username": self.conn.user_data["user"]["username"]},
+				"sender": {"id": self.conn.user_data["user"]["id"],
+					"username": self.conn.user_data["user"]["username"]},
 				"body": msg
 			})
 			if len(self.rooms[r]["messages"]) > 100:
@@ -348,6 +357,7 @@ class FiniyPyMain(tk.Frame):
 				for m in u["mod_powers"]:
 					if self.conn.get_channel_name(m).upper() == r.upper():
 						username = "[MOD] " + username
+						break
 			if prev_name != username:
 				self.user_list.insert(tk.END, username)
 			if username == prev_active_user:
@@ -361,16 +371,26 @@ class FiniyPyMain(tk.Frame):
 		else:
 			d = utc2local(datetime.strptime(m["created_at"], "%Y-%m-%d %H:%M:%S"))
 			d = ("00"+str(d.hour))[-2:] + ":" + ("00"+str(d.minute))[-2:]
-		if re.match("^/me\s", m["body"], re.I):
-			style = "italics"
-			self.message_area.insert(tk.END, "{} * ".format(d), "normal")
-			text = re.sub("^/me", "@"+m["sender"]["username"], m["body"]) + "\n"
+		user_type = ""
+		if m["sender"]["id"] == 1:
+			user_type = "admin-"
+		elif m["sender"]["username"] == self.conn.user_data["user"]["username"]:
+			user_type = "op-"
 		else:
-			style = "normal"
-			text = "{} {}: {}\n".format(d,
-				"@"+m["sender"]["username"] if m["sender"] else "@Guest",
-				m["body"])
-		self.message_area.insert(tk.END, text, style)
+			for p in m["sender"]["mod_powers"]:
+				if self.conn.get_channel_name(p).upper() == self.active_channel.upper():
+					user_type = "mod-"
+					break
+		if re.match("^/me\s", m["body"], re.I):
+			user_style = user_type + "bold-italics"
+			self.message_area.insert(tk.END, "{} * ".format(d), "normal")
+			self.message_area.insert(tk.END, "@"+m["sender"]["username"], user_style)
+			self.message_area.insert(tk.END, m["body"][3:]+"\n", "italics")
+		else:
+			user_style = user_type + "bold"
+			self.message_area.insert(tk.END, d+" ", "normal")
+			self.message_area.insert(tk.END, "@"+m["sender"]["username"]+": ", user_style)
+			self.message_area.insert(tk.END, m["body"]+"\n", "normal")
 	def refresh_messages(self, refresh=False):
 		r = self.active_channel
 		if len(r) == 0: return
