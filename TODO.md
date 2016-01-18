@@ -1,5 +1,5 @@
- * Clickable links
- * Clickable #channels
+ * Clickable links in /me messages
+ * Clickable #channels in /me messages
  * Unread messages per channel
  * Polls
  * Notifications for received PMs while logged out
