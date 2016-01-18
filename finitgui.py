@@ -450,7 +450,6 @@ class FiniyPyMain(tk.Frame):
 			user_style = user_type + "bold"
 			self.message_area.insert(tk.END, d+" ", "normal")
 			self.message_area.insert(tk.END, displaced+"@"+m["sender"]["username"]+": ", user_style)
-			print(m['body'])
 			urlsplit = m["body"].split()
 			for x in urlsplit:
 				if re.search("((https?):((//)|(\\\\))+([\w\d:#@%/;$()~_?\+-=\\\.&](#!)?)*)", x, re.I):
