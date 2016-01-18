@@ -452,9 +452,9 @@ class FiniyPyMain(tk.Frame):
 			self.message_area.insert(tk.END, displaced+"@"+m["sender"]["username"]+": ", user_style)
 			urlsplit = m["body"].split()
 			for x in urlsplit:
-				if re.search("((https?):((//)|(\\\\))+([\w\d:#@%/;$()~_?\+-=\\\.&](#!)?)*)", x, re.I):
+				if re.match("((https?):((//)|(\\\\))+([\w\d:#@%/;$()~_?\+-=\\\.&](#!)?)*)", x, re.I):
 					self.message_area.insert(tk.END, x+' ', self.hyper.add(lambda:urlcall(x)))
-				elif re.search('(#.*)', x, re.I):
+				elif re.match('(#.+)', x, re.I):
 					self.message_area.insert(tk.END, x+' ', self.hyper.add(lambda:self.conn.join(x)))
 				else:
 					self.message_area.insert(tk.END, x+' ', "normal")
