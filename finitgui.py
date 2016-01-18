@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 
-import re, time, threading, traceback, webbrowser
+import re, time, threading, traceback, webbrowser, os, configparser
 import tkinter as tk
 from datetime import datetime
 from finitclient import FinitClient
+
+config = configparser.ConfigParser()
 
 def urlcall(url):
 	webbrowser.open(url)
@@ -107,15 +109,8 @@ class FinitPyLogin(tk.Frame):
 		self.err_msg = tk.Label(self)
 		self.err_msg.grid(column=0, row=2, columnspan=3)
 		
-		self.disp_lbl = tk.Label(self, text="Username indent")
-		self.disp_lbl.grid(column=1, row=3, sticky=tk.W)
-		
-		self.disp_box = tk.Entry(self)
-		self.disp_var = tk.StringVar()
-		self.disp_box["textvariable"] = self.disp_var
-		self.disp_box.config(width=5,)
-		self.disp_box.grid(column=0, row=3, sticky=tk.W)
-		self.disp_box.insert(tk.END, '0')
+		self.login = tk.Button(self, text="Configure", command=ConfigWindow)
+		self.login.grid(column=0, row=3, sticky=tk.W)
 		
 		self.login = tk.Button(self, text="Sign in", command=self.sign_in)
 		self.login.grid(column=1, row=3, sticky=tk.E)
@@ -124,12 +119,46 @@ class FinitPyLogin(tk.Frame):
 		self.QUIT.grid(column=2, row=3, sticky=tk.W+tk.E)
 	def sign_in(self):
 		global disp
-		disp = self.disp_var.get()
+		disp = config['MAIN']['displacement']
 		self.set_error("")
 		if self.on_login is not None:
 			self.on_login(self.user_var.get(), self.pwd_var.get())
 	def set_error(self, message):
 		self.err_msg["text"] = message
+
+
+class ConfigWindow(tk.Frame):
+	def __init__(self, master=None):
+		tk.Frame.__init__(self, master)
+		self.create_widgets()
+	def create_widgets(self):
+		self.wind = tk.Toplevel(self)
+		self.wind.wm_title('FinitPy Config')
+		top = self.wind.winfo_toplevel()
+		top.rowconfigure(0, weight=1)
+		top.columnconfigure(0, weight=1)
+		top.config(borderwidth=10)
+		
+		disp_lbl = tk.Label(self.wind, text="Username indent")
+		disp_lbl.grid(column=2, row=0, sticky=tk.W)
+		
+		disp_box = tk.Entry(self.wind)
+		self.disp_var = tk.StringVar()
+		disp_box["textvariable"] = self.disp_var
+		disp_box.config(width=5,)
+		disp_box.grid(column=0, row=0, sticky=tk.W)
+		disp_box.insert(tk.END, config['MAIN']['displacement'])
+		
+		save = tk.Button(self.wind, text="Save", command=self.save)
+		save.grid(column=0, row=3, sticky=tk.W)
+	def save(self):
+		config['MAIN']['displacement'] = self.disp_var.get()
+		with open('config.ini', 'w') as configfile:
+			config.write(configfile)
+		self.wind.destroy()
+		
+		
+		
 
 class FiniyPyMain(tk.Frame):
 	def __init__(self, master=None, conn=None):
@@ -495,11 +524,18 @@ class FiniyPyMain(tk.Frame):
 
 class FinitApp:
 	def __init__(self):
+		self.initconfig()
 		self.client = FinitClient()
 		self.root = tk.Tk()
 		self.root.title("FinitPy - Sign in")
 		self.app = FinitPyLogin(master=self.root, on_login=self.on_login)
 		self.app.mainloop()
+	def initconfig(self):
+		if os.path.isfile('config.ini') is False:
+			config['MAIN'] = {'displacement': 0}
+			with open('config.ini', 'w') as configfile:
+				config.write(configfile)
+		config.read('config.ini')
 	def on_login(self, email, pwd):
 		if self.client.login(email, pwd):
 			self.root.destroy()
