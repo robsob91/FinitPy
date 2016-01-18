@@ -140,6 +140,7 @@ class FiniyPyMain(tk.Frame):
 		self.active_channel = ""
 		self.new_msg_count = 0
 		self.new_pm = False
+		self.master.protocol("WM_DELETE_WINDOW", self.before_close)
 		self.grid(sticky=tk.N+tk.S+tk.E+tk.W)
 		self.create_widgets()
 		self.links = {}
@@ -265,6 +266,11 @@ class FiniyPyMain(tk.Frame):
 				self.refresh_messages(True)
 			else:
 				self.refresh_messages()
+	def before_close(self):
+		for r in self.rooms:
+			self.conn.leave(r)
+		self.conn.wait_for_logout()
+		self.master.destroy()
 	def on_message(self, conn, data):
 		try:
 			if data["event"] == "subscribed":
