@@ -24,7 +24,7 @@ class FinitClient:
 				body=json.dumps({"email": email, "password": password}),
 				headers={"Content-Type": "application/json;charset=utf-8"})
 			resp = conn.getresponse();
-			user_data = json.loads(str(resp.readall(), "utf-8"))
+			user_data = json.loads(str(resp.read(), "utf-8"))
 			if "error" in user_data:
 				self.last_error = user_data["error"]
 				if self.on_login is not None: self.on_login(self, True)
@@ -63,7 +63,7 @@ class FinitClient:
 					headers={"Content-Type": "text/plain; charset=UTF-8",
 						"Authorization": "Bearer "+self.user_data['token']})
 				resp = conn.getresponse()
-				if str(resp.readall(), "utf-8").strip() == "Good":
+				if str(resp.read(), "utf-8").strip() == "Good":
 					success = True
 			except Exception as e:
 				self.last_error = e
@@ -93,7 +93,7 @@ class FinitClient:
 			conn = http.client.HTTPSConnection("finit.co", timeout=30)
 			conn.request("GET", "/api/messages?chatroom_channel={}".format(
 				channel), headers={"Authorization": "Bearer "+self.user_data['token']})
-			resp = json.loads(str(conn.getresponse().readall(), "utf-8"))
+			resp = json.loads(str(conn.getresponse().read(), "utf-8"))
 			return resp
 		except Exception as e:
 			print(e)
