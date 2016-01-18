@@ -1,5 +1,5 @@
- * Clickable links in /me messages
- * Clickable #channels in /me messages
+ * Support for spoilers
+ * Fix wrong link/channel being opened when there are more than two links/channels in the same message
  * Unread messages per channel
  * Polls
  * Notifications for received PMs while logged out
