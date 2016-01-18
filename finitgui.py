@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 
-import re, time, threading, traceback
+import re, time, threading, traceback, webbrowser
 import tkinter as tk
 from datetime import datetime
 from finitclient import FinitClient
+
+def urlcall(url):
+	webbrowser.open(url)
 
 # I "stole" this from StackOverflow
 def utc2local(utc):
@@ -35,6 +38,41 @@ def convert65536back(s):
 		s=re.sub(r"{\d\d\d\d\d+ū}", parse65536, s);
 	s=re.sub(r"ᗍ(\d\d\d\d\d+)ūᗍ", r"{\1ū}", s);
 	return s;
+
+class HyperlinkManager:
+
+	def __init__(self, text):
+		self.text = text
+
+		self.text.tag_config("hyper", foreground="black", underline=1)
+
+		self.text.tag_bind("hyper", "<Enter>", self._enter)
+		self.text.tag_bind("hyper", "<Leave>", self._leave)
+		self.text.tag_bind("hyper", "<Button-1>", self._click)
+
+		self.reset()
+
+	def reset(self):
+		self.links = {}
+
+	def add(self, action):
+		# add an action to the manager.  returns tags to use in
+		# associated text widget
+		tag = "hyper-%d" % len(self.links)
+		self.links[tag] = action
+		return "hyper", tag
+
+	def _enter(self, event):
+		self.text.config(cursor="hand2")
+
+	def _leave(self, event):
+		self.text.config(cursor="")
+
+	def _click(self, event):
+		for tag in self.text.tag_names(tk.CURRENT):
+			if tag[:6] == "hyper-":
+				self.links[tag]()
+				return
 
 class FinitPyLogin(tk.Frame):
 	def __init__(self, master=None, on_login=None):
@@ -69,12 +107,24 @@ class FinitPyLogin(tk.Frame):
 		self.err_msg = tk.Label(self)
 		self.err_msg.grid(column=0, row=2, columnspan=3)
 		
+		self.disp_lbl = tk.Label(self, text="Username indent")
+		self.disp_lbl.grid(column=1, row=3, sticky=tk.W)
+		
+		self.disp_box = tk.Entry(self)
+		self.disp_var = tk.StringVar()
+		self.disp_box["textvariable"] = self.disp_var
+		self.disp_box.config(width=5,)
+		self.disp_box.grid(column=0, row=3, sticky=tk.W)
+		self.disp_box.insert(tk.END, '0')
+		
 		self.login = tk.Button(self, text="Sign in", command=self.sign_in)
 		self.login.grid(column=1, row=3, sticky=tk.E)
 		
 		self.QUIT = tk.Button(self, text="Quit", command=self.master.destroy)
 		self.QUIT.grid(column=2, row=3, sticky=tk.W+tk.E)
 	def sign_in(self):
+		global disp
+		disp = self.disp_var.get()
 		self.set_error("")
 		if self.on_login is not None:
 			self.on_login(self.user_var.get(), self.pwd_var.get())
@@ -93,6 +143,7 @@ class FiniyPyMain(tk.Frame):
 		self.master.protocol("WM_DELETE_WINDOW", self.before_close)
 		self.grid(sticky=tk.N+tk.S+tk.E+tk.W)
 		self.create_widgets()
+		self.links = {}
 	def create_widgets(self):
 		top = self.winfo_toplevel()
 		top.rowconfigure(0, weight=1)
@@ -140,6 +191,7 @@ class FiniyPyMain(tk.Frame):
 		self.message_area.tag_configure('op-bold', font=('Courier', 10, 'bold',), foreground='lime green')
 		self.message_area.tag_configure('op-bold-italics', font=('Courier', 10, 'bold italic',), foreground='lime green')
 		self.message_area.config(state=tk.DISABLED)
+		self.hyper = HyperlinkManager(self.message_area)
 		
 		self.join_lbl = tk.Label(self, text="Users")
 		self.join_lbl.grid(column=3, row=1)
@@ -387,16 +439,27 @@ class FiniyPyMain(tk.Frame):
 				if self.conn.get_channel_name(p).upper() == self.active_channel.upper():
 					user_type = "mod-"
 					break
+		displacement = int(disp) - len(m["sender"]["username"])
+		displaced = ' ' * displacement
 		if re.match("^/me\s", m["body"], re.I):
 			user_style = user_type + "bold-italics"
 			self.message_area.insert(tk.END, "{} * ".format(d), "normal")
-			self.message_area.insert(tk.END, "@"+m["sender"]["username"], user_style)
+			self.message_area.insert(tk.END, displaced+"@"+m["sender"]["username"], user_style)
 			self.message_area.insert(tk.END, m["body"][3:]+"\n", "italics")
 		else:
 			user_style = user_type + "bold"
 			self.message_area.insert(tk.END, d+" ", "normal")
-			self.message_area.insert(tk.END, "@"+m["sender"]["username"]+": ", user_style)
-			self.message_area.insert(tk.END, m["body"]+"\n", "normal")
+			self.message_area.insert(tk.END, displaced+"@"+m["sender"]["username"]+": ", user_style)
+			print(m['body'])
+			urlsplit = m["body"].split()
+			for x in urlsplit:
+				if re.search("((https?):((//)|(\\\\))+([\w\d:#@%/;$()~_?\+-=\\\.&](#!)?)*)", x, re.I):
+					self.message_area.insert(tk.END, x+' ', self.hyper.add(lambda:urlcall(x)))
+				elif re.search('(#.*)', x, re.I):
+					self.message_area.insert(tk.END, x+' ', self.hyper.add(lambda:self.conn.join(x)))
+				else:
+					self.message_area.insert(tk.END, x+' ', "normal")
+			self.message_area.insert(tk.END, "\n", "normal")
 	def refresh_messages(self, refresh=False):
 		r = self.active_channel
 		if len(r) == 0: return
