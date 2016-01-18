@@ -46,23 +46,27 @@ class HyperlinkManager:
 	def __init__(self, text):
 		self.text = text
 
-		self.text.tag_config("hyper", foreground="black", underline=1)
+		self.text.tag_config("hyper+normal", font=('Courier', 10, 'underline'))
+		self.text.tag_config("hyper+italics", font=('Courier', 10, 'italic underline',))
 
-		self.text.tag_bind("hyper", "<Enter>", self._enter)
-		self.text.tag_bind("hyper", "<Leave>", self._leave)
-		self.text.tag_bind("hyper", "<Button-1>", self._click)
+		self.text.tag_bind("hyper+normal", "<Enter>", self._enter)
+		self.text.tag_bind("hyper+normal", "<Leave>", self._leave)
+		self.text.tag_bind("hyper+normal", "<Button-1>", self._click)
+		self.text.tag_bind("hyper+italics", "<Enter>", self._enter)
+		self.text.tag_bind("hyper+italics", "<Leave>", self._leave)
+		self.text.tag_bind("hyper+italics", "<Button-1>", self._click)
 
 		self.reset()
 
 	def reset(self):
 		self.links = {}
 
-	def add(self, action):
+	def add(self, action, italics=False):
 		# add an action to the manager.  returns tags to use in
 		# associated text widget
 		tag = "hyper-%d" % len(self.links)
 		self.links[tag] = action
-		return "hyper", tag
+		return "hyper+italics" if italics else "hyper+normal", tag
 
 	def _enter(self, event):
 		self.text.config(cursor="hand2")
@@ -452,6 +456,15 @@ class FiniyPyMain(tk.Frame):
 			prev_name = username
 		if active_index >= 0:
 			self.user_list.activate(active_index)
+	def _generate_links(self, body, italics=False):
+		urlsplit = body.split()
+		for x in urlsplit:
+			if re.match("((https?):((//)|(\\\\))+([\w\d:#@%/;$()~_?\+-=\\\.&](#!)?)*)", x, re.I):
+				self.message_area.insert(tk.END, x+' ', self.hyper.add(lambda:urlcall(x), italics))
+			elif re.match('(#.+)', x, re.I):
+				self.message_area.insert(tk.END, x+' ', self.hyper.add(lambda:self.conn.join(x), italics))
+			else:
+				self.message_area.insert(tk.END, x+' ', "italics" if italics else "normal")
 	def _add_message(self, m):
 		if len(m["created_at"]) <= 5:
 			d = m["created_at"]
@@ -474,27 +487,13 @@ class FiniyPyMain(tk.Frame):
 			user_style = user_type + "bold-italics"
 			self.message_area.insert(tk.END, displaced+"{} * ".format(d), "normal")
 			self.message_area.insert(tk.END, "@"+m["sender"]["username"]+' ', user_style)
-			urlsplit = m["body"][3:].split()
-			for x in urlsplit:
-				if re.match("((https?):((//)|(\\\\))+([\w\d:#@%/;$()~_?\+-=\\\.&](#!)?)*)", x, re.I):
-					self.message_area.insert(tk.END, x+' ', self.hyper.add(lambda:urlcall(x)))
-				elif re.match('(#.+)', x, re.I):
-					self.message_area.insert(tk.END, x+' ', self.hyper.add(lambda:self.conn.join(x)))
-				else:
-					self.message_area.insert(tk.END, x+' ', "italics")
+			self._generate_links(m["body"][3:], italics=True)
 			self.message_area.insert(tk.END, "\n", "normal")
 		else:
 			user_style = user_type + "bold"
 			self.message_area.insert(tk.END, d+" ", "normal")
 			self.message_area.insert(tk.END, displaced+"@"+m["sender"]["username"]+": ", user_style)
-			urlsplit = m["body"].split()
-			for x in urlsplit:
-				if re.match("((https?):((//)|(\\\\))+([\w\d:#@%/;$()~_?\+-=\\\.&](#!)?)*)", x, re.I):
-					self.message_area.insert(tk.END, x+' ', self.hyper.add(lambda:urlcall(x)))
-				elif re.match('(#.+)', x, re.I):
-					self.message_area.insert(tk.END, x+' ', self.hyper.add(lambda:self.conn.join(x)))
-				else:
-					self.message_area.insert(tk.END, x+' ', "normal")
+			self._generate_links(m["body"])
 			self.message_area.insert(tk.END, "\n", "normal")
 	def refresh_messages(self, refresh=False):
 		r = self.active_channel
