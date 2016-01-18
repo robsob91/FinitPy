@@ -128,8 +128,8 @@ class FiniyPyMain(tk.Frame):
 		
 		self.message_area = tk.Text(self, wrap='word', height=28, width=80)
 		self.message_area.grid(column=1, row=3, columnspan=2, sticky=tk.N+tk.S+tk.E+tk.W)
-		self.message_area.tag_configure('normal', font=('monospace', 10,))
-		self.message_area.tag_configure('italics', font=('monospace', 10, 'italic',))
+		self.message_area.tag_configure('normal', font=('Courier', 10,))
+		self.message_area.tag_configure('italics', font=('Courier', 10, 'italic',))
 		self.message_area.config(state=tk.DISABLED)
 		
 		self.join_lbl = tk.Label(self, text="Users")
@@ -363,7 +363,7 @@ class FiniyPyMain(tk.Frame):
 			d = ("00"+str(d.hour))[-2:] + ":" + ("00"+str(d.minute))[-2:]
 		if re.match("^/me\s", m["body"], re.I):
 			style = "italics"
-			text = "{} {}\n".format(d,
+			text = "{} * {}\n".format(d,
 				re.sub("^/me", "@"+m["sender"]["username"], m["body"]))
 		else:
 			style = "normal"
