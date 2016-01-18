@@ -103,20 +103,21 @@ class FinitClient:
 			return self._private_join(channel[1:])
 		if channel[0] == "#":
 			channel = channel[1:]
-		self.send_json({"event":"subscribe", "channel":"pub_"+channel})
+		self.send_json({"event":"subscribe", "channel":"pub_"+channel.lower()})
 		return True
 	def leave(self, channel):
 		if channel[0] == "@":
 			return self._private_leave(channel[1:])
 		if channel[0] == "#":
 			channel = channel[1:]
-		self.send_json({"event":"unsubscribe", "channel":"pub_"+channel})
+		self.send_json({"event":"unsubscribe", "channel":"pub_"+channel.lower()})
 		return True
 	def message(self, channel, message):
 		if channel[0] == "@":
 			return self._private_message(channel[1:], message)
 		if channel[0] == "#":
 			channel = channel[1:]
+		channel = channel.lower()
 		self.send_json({"event":"client-message","channel":"pub_"+channel,"data":{"channel":"pub_"+channel,"body":message}})
 		return True
 	def get_messages(self, channel):
@@ -124,7 +125,7 @@ class FinitClient:
 			return self._get_private_messages(channel[1:])
 		if channel[0] == "#":
 			channel = channel[1:]
-		return self._internal_get_messages("pub_"+channel)
+		return self._internal_get_messages("pub_"+channel.lower())
 	def _get_ids_sorted(self, user):
 		uid = self.get_user_id(user)
 		if uid is None or self.user_data is None:
@@ -205,11 +206,12 @@ class FinitClient:
 		if not channel.startswith("@") and not channel.startswith("#"):
 			channel = "#" + channel
 		if len(channel) == 1: return None
+		if channel[0] == "#": channel = channel.lower()
 		return channel
 	def get_channel_name(self, pub_prv_fmt):
 		channel = pub_prv_fmt.strip()
 		if channel.startswith("pub_"):
-			return "#"+channel[4:]
+			return "#"+channel[4:].lower()
 		elif channel.startswith("prv_"):
 			_, id1, id2 = channel.split("_")
 			uid = int(id1 if self.user_data["user"]["id"] == int(id2) else id2)
