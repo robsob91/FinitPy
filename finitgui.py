@@ -53,7 +53,7 @@ class FinitPyLogin(tk.Frame):
 		self.user_lbl = tk.Label(self, text="Email")
 		self.user_lbl.grid(column=0, row=0, sticky=tk.W+tk.E)
 		
-		self.user = tk.Entry(self)
+		self.user = tk.Entry(self, width=35)
 		self.user_var = tk.StringVar()
 		self.user["textvariable"] = self.user_var
 		self.user.grid(column=1, row=0, columnspan=2, sticky=tk.W+tk.E)
