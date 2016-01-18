@@ -8,7 +8,7 @@ This is the repository for FinitPy, a Python 3 library for communicating with [f
 
 *finitgui.py* is a GUI client written using tk
 
-**Requirements:** tk and websocket libraries.
+**Requirements:** tk and [websocket](https://pypi.python.org/pypi/websocket-client/) libraries.
 
 None of the clients are complete and lack support for important features such as new PM notifications and polls.
 
