@@ -7,9 +7,6 @@ from finitclient import FinitClient
 
 config = configparser.ConfigParser()
 
-def urlcall(url):
-	webbrowser.open(url)
-
 # I "stole" this from StackOverflow
 def utc2local(utc):
 	epoch = time.mktime(utc.timetuple())
@@ -457,14 +454,26 @@ class FiniyPyMain(tk.Frame):
 		if active_index >= 0:
 			self.user_list.activate(active_index)
 	def _generate_links(self, body, italics=False):
-		urlsplit = body.split()
-		for x in urlsplit:
-			if re.match("((https?):((//)|(\\\\))+([\w\d:#@%/;$()~_?\+-=\\\.&](#!)?)*)", x, re.I):
-				self.message_area.insert(tk.END, x+' ', self.hyper.add(lambda:urlcall(x), italics))
-			elif re.match('(#.+)', x, re.I):
-				self.message_area.insert(tk.END, x+' ', self.hyper.add(lambda:self.conn.join(x), italics))
-			else:
-				self.message_area.insert(tk.END, x+' ', "italics" if italics else "normal")
+		while len(body):
+			s = re.search("(^|\W)[#h]", body, re.I)
+			if not s:
+				self.message_area.insert(tk.END, body, "italics" if italics else "normal")
+				return
+			if s.start() > 0:
+				self.message_area.insert(tk.END, body[:s.start()+1], "italics" if italics else "normal")
+				body = body[s.start()+1:]
+			m = re.match("#[a-z0-1]+", body, re.I)
+			if m:
+				self.message_area.insert(tk.END, m.group(), self.hyper.add(lambda:self.conn.join(m.group()), italics))
+				body = body[m.end():]
+				continue
+			m = re.match("(https?):((//)|(\\\\))+([\w\d:#@%/;$()~_?\+-=\\\.&](#!)?)*", body, re.I)
+			if m:
+				self.message_area.insert(tk.END, m.group(), self.hyper.add(lambda:webbrowser.open(m.group()), italics))
+				body = body[m.end():]
+				continue
+			self.message_area.insert(tk.END, body[:1], "italics" if italics else "normal")
+			body = body[1:]
 	def _add_message(self, m):
 		if len(m["created_at"]) <= 5:
 			d = m["created_at"]
