@@ -443,9 +443,17 @@ class FiniyPyMain(tk.Frame):
 		displaced = ' ' * displacement
 		if re.match("^/me\s", m["body"], re.I):
 			user_style = user_type + "bold-italics"
-			self.message_area.insert(tk.END, "{} * ".format(d), "normal")
-			self.message_area.insert(tk.END, displaced+"@"+m["sender"]["username"], user_style)
-			self.message_area.insert(tk.END, m["body"][3:]+"\n", "italics")
+			self.message_area.insert(tk.END, displaced+"{} * ".format(d), "normal")
+			self.message_area.insert(tk.END, "@"+m["sender"]["username"]+' ', user_style)
+			urlsplit = m["body"][3:].split()
+			for x in urlsplit:
+				if re.match("((https?):((//)|(\\\\))+([\w\d:#@%/;$()~_?\+-=\\\.&](#!)?)*)", x, re.I):
+					self.message_area.insert(tk.END, x+' ', self.hyper.add(lambda:urlcall(x)))
+				elif re.match('(#.+)', x, re.I):
+					self.message_area.insert(tk.END, x+' ', self.hyper.add(lambda:self.conn.join(x)))
+				else:
+					self.message_area.insert(tk.END, x+' ', "italics")
+			self.message_area.insert(tk.END, "\n", "normal")
 		else:
 			user_style = user_type + "bold"
 			self.message_area.insert(tk.END, d+" ", "normal")
