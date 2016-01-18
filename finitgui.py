@@ -128,6 +128,8 @@ class FiniyPyMain(tk.Frame):
 		
 		self.message_area = tk.Text(self, wrap='word', height=28, width=80)
 		self.message_area.grid(column=1, row=3, columnspan=2, sticky=tk.N+tk.S+tk.E+tk.W)
+		self.message_area.tag_configure('normal', font=('monospace', 10,))
+		self.message_area.tag_configure('italics', font=('monospace', 10, 'italic',))
 		self.message_area.config(state=tk.DISABLED)
 		
 		self.join_lbl = tk.Label(self, text="Users")
@@ -199,8 +201,9 @@ class FiniyPyMain(tk.Frame):
 				"body": msg
 			})
 			if len(self.rooms[r]["messages"]) > 100:
-				self.rooms[r]["messages"] = self.rooms[r]["messages"][-100:]
-			self.refresh_messages()
+				self.refresh_messages(True)
+			else:
+				self.refresh_messages()
 	def on_message(self, conn, data):
 		try:
 			if data["event"] == "subscribed":
@@ -236,7 +239,7 @@ class FiniyPyMain(tk.Frame):
 					self.channel_list.activate(self.channel_list.size()-1)
 					self.rooms[name] = {"channel_name":data["channel"], "id":uid,
 						"messages":messages, "members":data["members"],
-						"list_name":name, "loaded":True}
+						"list_name":name, "loaded":True, "new_msg":False}
 			elif data["event"] == "unsubscribed":
 				f = None
 				for k in self.rooms:
@@ -266,9 +269,12 @@ class FiniyPyMain(tk.Frame):
 				data["created_at"] = ("00"+str(time.hour))[-2:] + ":" + ("00"+str(time.minute))[-2:]
 				self.rooms[channel]["messages"].append(data)
 				if len(self.rooms[channel]["messages"]) > 100:
-					self.rooms[channel]["messages"] = self.rooms[channel]["messages"][-100:]
-				if channel == self.active_channel:
-					self.refresh_messages()
+					if channel == self.active_channel:
+						self.refresh_messages(True)
+					else:
+						self.rooms[channel]["messages"] = self.rooms[channel]["messages"][-100:]
+				elif channel == self.active_channel:
+					self.refresh_messages(True)
 			elif data["event"] == 10: # This is a PM
 				id1, id2 = int(data["source_id"]), int(data["user_id"])
 				if id2 < id1:
@@ -349,25 +355,47 @@ class FiniyPyMain(tk.Frame):
 			prev_name = username
 		if active_index >= 0:
 			self.user_list.activate(active_index)
-	def refresh_messages(self):
+	def _add_message(self, m):
+		if len(m["created_at"]) <= 5:
+			d = m["created_at"]
+		else:
+			d = utc2local(datetime.strptime(m["created_at"], "%Y-%m-%d %H:%M:%S"))
+			d = ("00"+str(d.hour))[-2:] + ":" + ("00"+str(d.minute))[-2:]
+		if re.match("^/me\s", m["body"], re.I):
+			style = "italics"
+			text = "{} {}\n".format(d,
+				re.sub("^/me", "@"+m["sender"]["username"], m["body"]))
+		else:
+			style = "normal"
+			text = "{} {}: {}\n".format(d,
+				"@"+m["sender"]["username"] if m["sender"] else "@Guest",
+				m["body"])
+		self.message_area.insert(tk.END, text, style)
+	def refresh_messages(self, refresh=False):
 		r = self.active_channel
 		if len(r) == 0: return
-		text = ""
-		for m in self.rooms[r]["messages"]:
-			if len(m["created_at"]) <= 5:
-				d = m["created_at"]
-			else:
-				d = utc2local(datetime.strptime(m["created_at"], "%Y-%m-%d %H:%M:%S"))
-				d = ("00"+str(d.hour))[-2:] + ":" + ("00"+str(d.minute))[-2:]
-			text += "{} {}: {}\n".format(
-				d, "@"+m["sender"]["username"] if m["sender"] else "@Guest",
-				m["body"])
-		text = convert65536(text)
-		self.message_area.config(state=tk.NORMAL)
-		self.message_area.delete('1.0', tk.END)
-		self.message_area.insert(tk.END, text)
-		self.message_area.see(tk.END)
-		self.message_area.config(state=tk.DISABLED)
+		if refresh == True:
+			discarded = []
+			if len(self.rooms[r]["messages"]) > 100:
+				discarded = self.rooms[r]["messages"][:-100]
+				self.rooms[r]["messages"] = self.rooms[r]["messages"][-100:]
+			lines_to_remove = 0
+			for d in discarded:
+				lines_to_remove += 1 + len(list(filter(lambda x:x=='\n', d["body"])))
+			self.message_area.config(state=tk.NORMAL)
+			if lines_to_remove > 0:
+				self.message_area.delete('1.0', str(lines_to_remove+1)+'.0')
+			for i in range(100-len(discarded),100):
+				self._add_message(self.rooms[r]["messages"][i])
+			self.message_area.see(tk.END)
+			self.message_area.config(state=tk.DISABLED)
+		else:
+			self.message_area.config(state=tk.NORMAL)
+			self.message_area.delete('1.0', tk.END)
+			for m in self.rooms[r]["messages"]:
+				self._add_message(m)
+			self.message_area.see(tk.END)
+			self.message_area.config(state=tk.DISABLED)
 
 class FinitApp:
 	def __init__(self):
