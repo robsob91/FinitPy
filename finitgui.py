@@ -363,8 +363,8 @@ class FiniyPyMain(tk.Frame):
 			d = ("00"+str(d.hour))[-2:] + ":" + ("00"+str(d.minute))[-2:]
 		if re.match("^/me\s", m["body"], re.I):
 			style = "italics"
-			text = "{} * {}\n".format(d,
-				re.sub("^/me", "@"+m["sender"]["username"], m["body"]))
+			self.message_area.insert(tk.END, "{} * ".format(d), "normal")
+			text = re.sub("^/me", "@"+m["sender"]["username"], m["body"]) + "\n"
 		else:
 			style = "normal"
 			text = "{} {}: {}\n".format(d,
