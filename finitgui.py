@@ -239,7 +239,7 @@ class FiniyPyMain(tk.Frame):
 					self.channel_list.activate(self.channel_list.size()-1)
 					self.rooms[name] = {"channel_name":data["channel"], "id":uid,
 						"messages":messages, "members":data["members"],
-						"list_name":name, "loaded":True, "new_msg":False}
+						"list_name":name, "loaded":True}
 			elif data["event"] == "unsubscribed":
 				f = None
 				for k in self.rooms:
