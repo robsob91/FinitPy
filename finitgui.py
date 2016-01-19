@@ -462,8 +462,16 @@ class FiniyPyMain(tk.Frame):
 			m = re.match("/?c/\d+", body, re.I)
 			if m:
 				l = m.group()
-				if l[0] != "/": l = l + "/"
+				if l[0] != "/": l = "/" + l
 				l = "https://dilute.hoppy.haus" + l
+				self.message_area.insert(tk.END, m.group(), (hyper, l))
+				body = body[m.end():]
+				continue
+			m = re.match("/?vp/\d+", body, re.I)
+			if m:
+				l = m.group()
+				if l[0] != "/": l = "/" + l
+				l = "https://diluted.hoppy.haus" + l
 				self.message_area.insert(tk.END, m.group(), (hyper, l))
 				body = body[m.end():]
 				continue
