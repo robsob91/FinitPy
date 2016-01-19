@@ -463,7 +463,7 @@ class FiniyPyMain(tk.Frame):
 			if m:
 				l = m.group()
 				if l[0] != "/": l = "/" + l
-				l = "https://dilute.hoppy.haus" + l
+				l = "https://diluted.hoppy.haus" + l
 				self.message_area.insert(tk.END, m.group(), (hyper, l))
 				body = body[m.end():]
 				continue
