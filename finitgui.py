@@ -438,7 +438,7 @@ class FiniyPyMain(tk.Frame):
 		hyper = "hyper+italics" if italics else "hyper+normal"
 		style = "italics" if italics else "normal"
 		while len(body):
-			s = re.search("(^|\W)[rv/#h]", body, re.I)
+			s = re.search("(^|\W)[rcv/#h]", body, re.I)
 			if not s:
 				self.message_area.insert(tk.END, body, style)
 				return
@@ -453,12 +453,17 @@ class FiniyPyMain(tk.Frame):
 			m = re.match("/?[rv]/[a-z]+", body, re.I)
 			if m:
 				l = m.group()
-				if l[0] != "/":
-					l = "/" + l
-				if l[1] == "r":
-					l = "https://www.reddit.com" + l
-				else:
-					l = "https://voat.co" + l
+				if l[0] != "/": l = "/" + l
+				if l[1] == "r": l = "https://www.reddit.com" + l
+				else: l = "https://voat.co" + l
+				self.message_area.insert(tk.END, m.group(), (hyper, l))
+				body = body[m.end():]
+				continue
+			m = re.match("/?c/\d+", body, re.I)
+			if m:
+				l = m.group()
+				if l[0] != "/": l = l + "/"
+				l = "https://dilute.hoppy.haus" + l
 				self.message_area.insert(tk.END, m.group(), (hyper, l))
 				body = body[m.end():]
 				continue
