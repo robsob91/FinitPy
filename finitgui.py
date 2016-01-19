@@ -38,45 +38,6 @@ def convert65536back(s):
 	s=re.sub(r"ᗍ(\d\d\d\d\d+)ūᗍ", r"{\1ū}", s);
 	return s;
 
-class HyperlinkManager:
-
-	def __init__(self, text):
-		self.text = text
-
-		self.text.tag_config("hyper+normal", font=('Courier', 10, 'underline'))
-		self.text.tag_config("hyper+italics", font=('Courier', 10, 'italic underline',))
-
-		self.text.tag_bind("hyper+normal", "<Enter>", self._enter)
-		self.text.tag_bind("hyper+normal", "<Leave>", self._leave)
-		self.text.tag_bind("hyper+normal", "<Button-1>", self._click)
-		self.text.tag_bind("hyper+italics", "<Enter>", self._enter)
-		self.text.tag_bind("hyper+italics", "<Leave>", self._leave)
-		self.text.tag_bind("hyper+italics", "<Button-1>", self._click)
-
-		self.reset()
-
-	def reset(self):
-		self.links = {}
-
-	def add(self, action, italics=False):
-		# add an action to the manager.  returns tags to use in
-		# associated text widget
-		tag = "hyper-%d" % len(self.links)
-		self.links[tag] = action
-		return "hyper+italics" if italics else "hyper+normal", tag
-
-	def _enter(self, event):
-		self.text.config(cursor="hand2")
-
-	def _leave(self, event):
-		self.text.config(cursor="")
-
-	def _click(self, event):
-		for tag in self.text.tag_names(tk.CURRENT):
-			if tag[:6] == "hyper-":
-				self.links[tag]()
-				return
-
 class FinitPyLogin(tk.Frame):
 	def __init__(self, master=None, on_login=None):
 		tk.Frame.__init__(self, master)
@@ -220,8 +181,15 @@ class FiniyPyMain(tk.Frame):
 		self.message_area.tag_configure('mod-bold-italics', font=('Courier', 10, 'bold italic',), foreground='blue')
 		self.message_area.tag_configure('op-bold', font=('Courier', 10, 'bold',), foreground='lime green')
 		self.message_area.tag_configure('op-bold-italics', font=('Courier', 10, 'bold italic',), foreground='lime green')
+		self.message_area.tag_config("hyper+normal", font=('Courier', 10, 'underline'))
+		self.message_area.tag_config("hyper+italics", font=('Courier', 10, 'italic underline',))
+		self.message_area.tag_bind("hyper+normal", "<Enter>", self._enter_link)
+		self.message_area.tag_bind("hyper+normal", "<Leave>", self._leave_link)
+		self.message_area.tag_bind("hyper+normal", "<Button-1>", self._click_link)
+		self.message_area.tag_bind("hyper+italics", "<Enter>", self._enter_link)
+		self.message_area.tag_bind("hyper+italics", "<Leave>", self._leave_link)
+		self.message_area.tag_bind("hyper+italics", "<Button-1>", self._click_link)
 		self.message_area.config(state=tk.DISABLED)
-		self.hyper = HyperlinkManager(self.message_area)
 		
 		self.join_lbl = tk.Label(self, text="Users")
 		self.join_lbl.grid(column=3, row=1)
@@ -243,6 +211,19 @@ class FiniyPyMain(tk.Frame):
 		self.mention.grid(column=3, row=4, sticky=tk.E+tk.W)
 		
 		self.after(0, self.poll)
+	def _enter_link(self, event):
+		self.message_area.config(cursor="hand2")
+	def _leave_link(self, event):
+		self.message_area.config(cursor="")
+	def _click_link(self, event):
+		w = event.widget
+		x, y = event.x, event.y
+		tags = w.tag_names("@%d,%d" % (x, y))
+		if tags[1][0] == "#":
+			if tags[1] not in self.rooms:
+				self.conn.join(tags[1])
+		else:
+			webbrowser.open(tags[1])
 	def poll(self):
 		if self.channel_list.size() == 0:
 			self.active_channel = ""
@@ -454,25 +435,27 @@ class FiniyPyMain(tk.Frame):
 		if active_index >= 0:
 			self.user_list.activate(active_index)
 	def _generate_links(self, body, italics=False):
+		hyper = "hyper+italics" if italics else "hyper+normal"
+		style = "italics" if italics else "normal"
 		while len(body):
 			s = re.search("(^|\W)[#h]", body, re.I)
 			if not s:
-				self.message_area.insert(tk.END, body, "italics" if italics else "normal")
+				self.message_area.insert(tk.END, body, style)
 				return
 			if s.start() > 0:
-				self.message_area.insert(tk.END, body[:s.start()+1], "italics" if italics else "normal")
+				self.message_area.insert(tk.END, body[:s.start()+1], style)
 				body = body[s.start()+1:]
 			m = re.match("#[a-z0-1]+", body, re.I)
 			if m:
-				self.message_area.insert(tk.END, m.group(), self.hyper.add(lambda:self.conn.join(m.group()), italics))
+				self.message_area.insert(tk.END, m.group(), (hyper, m.group()))
 				body = body[m.end():]
 				continue
 			m = re.match("(https?):((//)|(\\\\))+([\w\d:#@%/;$()~_?\+-=\\\.&](#!)?)*", body, re.I)
 			if m:
-				self.message_area.insert(tk.END, m.group(), self.hyper.add(lambda:webbrowser.open(m.group()), italics))
+				self.message_area.insert(tk.END, m.group(), (hyper, m.group()))
 				body = body[m.end():]
 				continue
-			self.message_area.insert(tk.END, body[:1], "italics" if italics else "normal")
+			self.message_area.insert(tk.END, body[:1], style)
 			body = body[1:]
 	def _add_message(self, m):
 		if len(m["created_at"]) <= 5:
@@ -535,8 +518,13 @@ class FinitApp:
 		self.initconfig()
 		self.client = FinitClient()
 		self.root = tk.Tk()
-		self.root.title("FinitPy - Sign in")
-		self.app = FinitPyLogin(master=self.root, on_login=self.on_login)
+		#~ self.root.title("FinitPy - Sign in")
+		#~ self.app = FinitPyLogin(master=self.root, on_login=self.on_login)
+		global disp
+		disp = 0
+		self.client.login("fuzzywords23@gmail.com", "FuckThisDamnPwd")
+		self.root.title("FinitPy")
+		self.app = FiniyPyMain(master=self.root, conn=self.client)
 		self.app.mainloop()
 	def initconfig(self):
 		if os.path.isfile('config.ini') is False:
