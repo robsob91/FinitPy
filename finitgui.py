@@ -518,13 +518,8 @@ class FinitApp:
 		self.initconfig()
 		self.client = FinitClient()
 		self.root = tk.Tk()
-		#~ self.root.title("FinitPy - Sign in")
-		#~ self.app = FinitPyLogin(master=self.root, on_login=self.on_login)
-		global disp
-		disp = 0
-		self.client.login("fuzzywords23@gmail.com", "FuckThisDamnPwd")
-		self.root.title("FinitPy")
-		self.app = FiniyPyMain(master=self.root, conn=self.client)
+		self.root.title("FinitPy - Sign in")
+		self.app = FinitPyLogin(master=self.root, on_login=self.on_login)
 		self.app.mainloop()
 	def initconfig(self):
 		if os.path.isfile('config.ini') is False:
